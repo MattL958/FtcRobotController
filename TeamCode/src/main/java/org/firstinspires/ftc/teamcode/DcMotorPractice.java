@@ -18,6 +18,7 @@ public class DcMotorPractice extends OpMode {
         front_left_drive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         front_left_drive.setDirection(DcMotorSimple.Direction.REVERSE);
         ticksPerRev = front_left_drive.getMotorType().getTicksPerRev();
+        front_left_drive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
 
     @Override

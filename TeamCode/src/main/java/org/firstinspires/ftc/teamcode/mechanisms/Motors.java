@@ -9,7 +9,7 @@ public class Motors  {
     private DcMotor front_right_drive; //name this
 
     public void init(HardwareMap hwMap){
-        front_right_drive = hwMap.get(DcMotor.class,"front_right_drive");
+        front_right_drive = hwMap.get(DcMotor.class,"frontRightDrive");
         front_right_drive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         front_right_drive.setDirection(DcMotorSimple.Direction.REVERSE);
 

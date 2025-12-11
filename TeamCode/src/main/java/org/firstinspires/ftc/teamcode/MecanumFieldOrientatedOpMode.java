@@ -17,7 +17,7 @@ public class MecanumFieldOrientatedOpMode extends OpMode {
     public void init(){
 
         drive.init(hardwareMap);
-        imu = hardwareMap.get(IMU.class, "imu");
+        imu = hardwareMap.get(IMU.class, "imU");
     }
 
     @Override

@@ -14,7 +14,7 @@ public class ServoTest extends OpMode {
 
     @Override
     public void init() {
-        turretServo = hardwareMap.get(Servo.class,"turret_srvo");
+        turretServo = hardwareMap.get(Servo.class,"turret_servo");
     }
 
     @Override

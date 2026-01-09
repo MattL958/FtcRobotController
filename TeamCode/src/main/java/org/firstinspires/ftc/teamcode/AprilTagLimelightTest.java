@@ -28,10 +28,7 @@ public class AprilTagLimelightTest extends OpMode {
         imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
     }
 
-    @Override
-    public void start(){
-        limelight.start(); //if theres delay then put it into init but it drains battery
-    }
+
 
     @Override
     public void loop() {
@@ -39,12 +36,21 @@ public class AprilTagLimelightTest extends OpMode {
         limelight.updateRobotOrientation(orientation.getYaw());
         LLResult llResult = limelight.getLatestResult();
 
+        telemetry.addData("Yaw",orientation.getYaw());
+
+        telemetry.addData("isValid",llResult.isValid());
+
+        telemetry.addData("Tag Count", llResult.getFiducialResults().size());
+
+
         if (llResult != null && llResult.isValid()){
             Pose3D botPose = llResult.getBotpose_MT2();
             telemetry.addData("tx", llResult.getTx());
             telemetry.addData("ty",llResult.getTy());
             telemetry.addData("ta", llResult.getTa());
             telemetry.addData("BotPose", botPose.toString());
+        } else {
+            telemetry.addData("No Tag Found","");
         }
     }
 }

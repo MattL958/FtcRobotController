@@ -32,7 +32,7 @@ public class MecanumDrive {
 
         RevHubOrientationOnRobot RevOrientation = new RevHubOrientationOnRobot( //defines paramaters for IMU. Logo direction and USB
                 RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                RevHubOrientationOnRobot.UsbFacingDirection.FORWARD);
+                RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
 
 
 

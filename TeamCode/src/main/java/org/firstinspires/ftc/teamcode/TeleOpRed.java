@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -28,6 +30,10 @@ public class TeleOpRed extends OpMode {
 
     double turretPower;
     double kp,kd,ki;
+
+    TelemetryPacket packet = new TelemetryPacket();
+
+    FtcDashboard dashboard = FtcDashboard.getInstance();
 
 
     @Override
@@ -122,5 +128,7 @@ public class TeleOpRed extends OpMode {
         }
 
         turretServo.setPower(turretPower);
+
+        packet.put("error",error);
     }
 }

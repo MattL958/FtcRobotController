@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -20,7 +21,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.mechanisms.MecanumDrive;
 
-@Config
+
 @TeleOp
 public class TeleOpRed extends OpMode {
     MecanumDrive drive = new MecanumDrive(); //call class
@@ -30,6 +31,8 @@ public class TeleOpRed extends OpMode {
     private IMU imu;
     private Limelight3A limelight;
     private CRServo turretServo;
+    private DcMotor left_transfer;
+    private DcMotor right_transfer;
 
     double error;
     double last_error = 0.0;
@@ -38,7 +41,8 @@ public class TeleOpRed extends OpMode {
     double turretPower;
     public static double kp,kd,ki; //public static shows up in dashboard config
     private ElapsedTime deltaTime = new ElapsedTime();
-    double[] errorArr = new double[10];
+    double[] errorArr = new double[5];
+    int count = 0;
     double sum;
 
     FtcDashboard dashboard = FtcDashboard.getInstance();
@@ -64,9 +68,21 @@ public class TeleOpRed extends OpMode {
 
         shooting = hardwareMap.get(DcMotorEx.class, "shooting");
 
-        shooting.setDirection((DcMotorSimple.Direction.FORWARD));
+        shooting.setDirection(DcMotor.Direction.FORWARD);
 
         shooting.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        left_transfer = hardwareMap.get(DcMotor.class,"left_transfer");
+
+        left_transfer.setDirection(DcMotorSimple.Direction.FORWARD);
+
+        left_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        right_transfer = hardwareMap.get(DcMotor.class, "right_transfer");
+
+        right_transfer.setDirection(DcMotor.Direction.FORWARD);
+
+        right_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         //init limelight
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
@@ -77,6 +93,9 @@ public class TeleOpRed extends OpMode {
                 RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
 
         imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
+
+
+
 
     }
 
@@ -128,23 +147,12 @@ public class TeleOpRed extends OpMode {
 
             error = -llResult.getTx();
 
-            derivative = (error-last_error)/deltaTime.seconds();
-            if (Math.abs(error)<0.5){
-                derivative=0.0;
-            }
 
-            for(int i = 0; i<errorArr.length;i++){
-                if (errorArr[i] == 0){
-                    errorArr[i] = error;
-                    break;
-                }
 
-                if(i==errorArr.length-1){
-                    for(int j = 0; j<errorArr.length-1;j++){
-                        errorArr[j] = errorArr[j+1];
-                    }
-                    errorArr[errorArr.length-1] = error;
-                }
+            errorArr[count] = error;
+            count +=1;
+            if(count > 4){
+                count = 0;
             }
 
 
@@ -158,6 +166,7 @@ public class TeleOpRed extends OpMode {
         } else {
             telemetry.addData("No Tag Found","");
             error = 0.0;
+            integral = 0;
         }
 
 
@@ -165,9 +174,9 @@ public class TeleOpRed extends OpMode {
         //turret PID
 
 
-        kp=0.03;
-        kd=0.003;
-        ki=0;
+        kp=0.01;
+        kd=0.0008;
+        ki=0.000;
 
         if(last_error==0.0){
             last_error=error;
@@ -175,7 +184,13 @@ public class TeleOpRed extends OpMode {
 
         telemetry.addData("error",error);
 
-
+        derivative = (error-last_error)/Math.max(deltaTime.seconds(),0.01);
+        if (Math.abs(error)<1){
+            derivative=0.0;
+        }
+        if (Math.abs(derivative)>50){
+            derivative=50;
+        }
         integral += error * deltaTime.seconds();
 
         turretPower = kp*error + kd*derivative + ki*integral;
@@ -193,12 +208,10 @@ public class TeleOpRed extends OpMode {
             turretPower = 1.0;
         } else if (turretPower<-1.0) {
             turretPower = -1.0;
-        } else if (Math.abs(turretPower)<0.2) {
-            turretPower = 0;
         }
 
         if (!(llResult != null && llResult.isValid())){
-            turretPower=-0.02;
+            turretPower=0;
         }
 
         //send power
@@ -207,11 +220,29 @@ public class TeleOpRed extends OpMode {
 
         shooting.setPower(gamepad1.left_trigger);
 
+        boolean aButton = gamepad1.a;
+        boolean bButton = gamepad1.b;
+        if(bButton){
+            left_transfer.setPower(0.2);
+            right_transfer.setPower(0.2);
+        } else if(aButton){
+            left_transfer.setPower(-0.2);
+            right_transfer.setPower(-0.2);
+        } else {
+            left_transfer.setPower(0.0);
+            right_transfer.setPower(0.0);
+        }
 
+        telemetry.addData("A Button",aButton);
+        telemetry.addData("B Button", bButton);
+
+
+        /*
         TelemetryPacket packet = new TelemetryPacket(); //create a new packet each loop
         packet.put("error",error);
 
 
         dashboard.sendTelemetryPacket(packet);
+        */
     }
 }

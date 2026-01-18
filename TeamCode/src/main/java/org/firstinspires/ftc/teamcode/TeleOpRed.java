@@ -216,7 +216,7 @@ public class TeleOpRed extends OpMode {
 
         //send power
         telemetry.addData("turretPower",turretPower);
-        turretServo.setPower(turretPower);
+        turretServo.setPower(0);
 
         shooting.setPower(gamepad1.left_trigger);
 

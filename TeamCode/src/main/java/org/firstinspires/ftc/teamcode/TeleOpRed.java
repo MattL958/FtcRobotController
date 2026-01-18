@@ -236,6 +236,11 @@ public class TeleOpRed extends OpMode {
         telemetry.addData("A Button",aButton);
         telemetry.addData("B Button", bButton);
 
+        boolean yButton = gamepad1.y;
+        if(yButton){
+            imu.resetYaw();
+        }
+
 
         /*
         TelemetryPacket packet = new TelemetryPacket(); //create a new packet each loop

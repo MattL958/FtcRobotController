@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -11,6 +12,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.mechanisms.MecanumDrive;
 
 @TeleOp
+@Disabled
 public class MecanumFieldOrientatedOpMode extends OpMode {
     MecanumDrive drive = new MecanumDrive(); //call class
     double forward, strafe, rotate;
@@ -38,7 +40,7 @@ public class MecanumFieldOrientatedOpMode extends OpMode {
 
         telemetry.addData("Yaw: ", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
 
-        drive.driveFieldRelative(forward, strafe, rotate);
+        //drive.driveFieldRelative(forward, strafe, rotate);
 
         double right_trigger = gamepad1.right_trigger;
         intake.setPower(right_trigger);

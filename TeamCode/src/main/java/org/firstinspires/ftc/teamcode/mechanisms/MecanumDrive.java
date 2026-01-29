@@ -10,7 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public class MecanumDrive {
     private DcMotor frontLeftMotor, backLeftMotor, frontRightMotor, backRightMotor; //class DcMotor, variables there
-    private IMU imu; //class IMU, variable named imu
+    //private IMU imu; //class IMU, variable named imu
 
     public void init(HardwareMap hwMap){
         frontLeftMotor = hwMap.get(DcMotor.class,"front_left_drive");
@@ -28,17 +28,17 @@ public class MecanumDrive {
         frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        imu = hwMap.get(IMU.class,"imu"); //orientation is based on control hub and usb direction. e.g. logo top usb front = facing forward
+        //imu = hwMap.get(IMU.class,"imu"); //orientation is based on control hub and usb direction. e.g. logo top usb front = facing forward
 
-        RevHubOrientationOnRobot RevOrientation = new RevHubOrientationOnRobot( //defines paramaters for IMU. Logo direction and USB
-                RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
+        //RevHubOrientationOnRobot RevOrientation = new RevHubOrientationOnRobot( //defines paramaters for IMU. Logo direction and USB
+                //RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                //RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
 
 
 
-        imu.initialize(new IMU.Parameters(RevOrientation));
+        //imu.initialize(new IMU.Parameters(RevOrientation));
 
-        imu.resetYaw();
+        //imu.resetYaw();
 
     }
 
@@ -68,13 +68,13 @@ public class MecanumDrive {
 
 
 
-    public void driveFieldRelative(double forward, double strafe, double rotate){
+    public void driveFieldRelative(double forward, double strafe, double rotate, double heading){
         //converting from cartesian to polar
         double theta = Math.atan2(forward,strafe);
         double r = Math.hypot(strafe,forward);
 
         theta = AngleUnit.normalizeRadians(theta -
-                imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS));
+                heading);
 
         //turn polar back to cartesian
         double newForward = r * Math.sin(theta);

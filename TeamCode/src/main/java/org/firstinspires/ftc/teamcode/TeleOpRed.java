@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -17,6 +18,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.mechanisms.MecanumDrive;
@@ -27,12 +30,14 @@ public class TeleOpRed extends OpMode {
     MecanumDrive drive = new MecanumDrive(); //call class
     double forward, strafe, rotate;
     private DcMotor intake;
-    private DcMotor shooting;
-    private IMU imu;
+    private DcMotorEx shooting;
+    //private IMU imu;
     private Limelight3A limelight;
     private CRServo turretServo;
     private DcMotor left_transfer;
     private DcMotor right_transfer;
+    private Servo transfer_servo;
+    GoBildaPinpointDriver pinpoint;
 
     double error;
     double last_error = 0.0;
@@ -68,15 +73,15 @@ public class TeleOpRed extends OpMode {
 
         shooting = hardwareMap.get(DcMotorEx.class, "shooting");
 
-        shooting.setDirection(DcMotor.Direction.FORWARD);
+        shooting.setDirection(DcMotorEx.Direction.FORWARD);
 
-        shooting.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        shooting.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         left_transfer = hardwareMap.get(DcMotor.class,"left_transfer");
 
-        left_transfer.setDirection(DcMotorSimple.Direction.FORWARD);
+        left_transfer.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        left_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        left_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER); //145.1 ticks/rev acc to website
 
         right_transfer = hardwareMap.get(DcMotor.class, "right_transfer");
 
@@ -84,17 +89,28 @@ public class TeleOpRed extends OpMode {
 
         right_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
+        transfer_servo = hardwareMap.get(Servo.class,"transfer_servo");
+
+
+
         //init limelight
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(8); //8 = red apriltag (24)
 
-        imu = hardwareMap.get(IMU.class,"imu");
-        RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
+        //imu = hardwareMap.get(IMU.class,"imu");
+        //RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP,
+                //RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
 
-        imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
+        //imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
 
+        // Get a reference to the sensor
+        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
 
+        // Configure the sensor
+        configurePinpoint();
+
+        // Set the location of the robot - this should be the place you are starting the robot from
+        pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
 
 
     }
@@ -112,24 +128,40 @@ public class TeleOpRed extends OpMode {
         strafe = gamepad1.left_stick_x;
         rotate = gamepad1.right_stick_x;
 
-        telemetry.addData("Yaw: ", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
+        if(gamepad1.a){
+            // You could use readings from April Tags here to give a new known position to the pinpoint
+            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
+        }
+        pinpoint.update();
+        Pose2D pose2D = pinpoint.getPosition();
 
-        drive.driveFieldRelative(forward, strafe, rotate);
+        forward = -gamepad1.left_stick_y;
+        strafe = gamepad1.left_stick_x;
+        rotate = gamepad1.right_stick_x;
+
+        telemetry.addData("Yaw: ", pose2D.getHeading(AngleUnit.DEGREES));
+
+        drive.driveFieldRelative(forward, strafe, rotate, pose2D.getHeading(AngleUnit.RADIANS));
+
+        telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
+        telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
+        telemetry.addData("Heading angle (DEGREES)",pose2D.getHeading(AngleUnit.DEGREES));
+
+
+        //drive.driveFieldRelative(forward, strafe, rotate);
 
 
         //intake
-        double right_trigger = gamepad1.right_trigger;
-        intake.setPower(right_trigger);
+        //double right_trigger = gamepad1.right_trigger;
+        //intake.setPower(right_trigger);
 
-        telemetry.addData("Right Trigger", right_trigger);
+        //.addData("Right Trigger", right_trigger);
 
 
         //apriltag recognition/telemetry
-        YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
-        limelight.updateRobotOrientation(orientation.getYaw());
+        //YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
+        limelight.updateRobotOrientation(pose2D.getHeading(AngleUnit.DEGREES));
         LLResult llResult = limelight.getLatestResult();
-
-        telemetry.addData("Yaw",orientation.getYaw());
 
         telemetry.addData("isValid",llResult.isValid());
 
@@ -218,29 +250,32 @@ public class TeleOpRed extends OpMode {
         telemetry.addData("turretPower",turretPower);
         turretServo.setPower(0);
 
-        shooting.setPower(gamepad1.left_trigger);
 
         boolean aButton = gamepad1.a;
         boolean bButton = gamepad1.b;
-        if(bButton){
-            left_transfer.setPower(0.2);
-            right_transfer.setPower(0.2);
-        } else if(aButton){
-            left_transfer.setPower(-0.2);
-            right_transfer.setPower(-0.2);
+
+        if(gamepad1.left_trigger != 0.0){
+            shooting.setPower(gamepad1.left_trigger);
+        } else if (aButton){
+            shooting.setPower(-1);
         } else {
-            left_transfer.setPower(0.0);
-            right_transfer.setPower(0.0);
+            shooting.setPower(0.0);
+        }
+
+
+
+
+        if(gamepad1.right_trigger != 0){
+            transfer_servo.setPosition(0);
+        } else {
+            transfer_servo.setPosition(0.15);
         }
 
         telemetry.addData("A Button",aButton);
         telemetry.addData("B Button", bButton);
 
-        boolean yButton = gamepad1.y;
-        if(yButton){
-            imu.resetYaw();
-        }
 
+        telemetry.addData("Flywheel",shooting.getVelocity());
 
         /*
         TelemetryPacket packet = new TelemetryPacket(); //create a new packet each loop
@@ -249,5 +284,47 @@ public class TeleOpRed extends OpMode {
 
         dashboard.sendTelemetryPacket(packet);
         */
+
+
+    }
+
+    public void configurePinpoint(){
+        /*
+         *  Set the odometry pod positions relative to the point that you want the position to be measured from.
+         *
+         *  The X pod offset refers to how far sideways from the tracking point the X (forward) odometry pod is.
+         *  Left of the center is a positive number, right of center is a negative number.
+         *
+         *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
+         *  Forward of center is a positive number, backwards is a negative number.
+         */
+        pinpoint.setOffsets(12.5, -225, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
+
+        /*
+         * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
+         * the goBILDA_SWINGARM_POD, or the goBILDA_4_BAR_POD.
+         * If you're using another kind of odometry pod, uncomment setEncoderResolution and input the
+         * number of ticks per unit of your odometry pod.  For example:
+         *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
+         */
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+
+        /*
+         * Set the direction that each of the two odometry pods count. The X (forward) pod should
+         * increase when you move the robot forward. And the Y (strafe) pod should increase when
+         * you move the robot to the left.
+         */
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
+                GoBildaPinpointDriver.EncoderDirection.REVERSED);
+
+        /*
+         * Before running the robot, recalibrate the IMU. This needs to happen when the robot is stationary
+         * The IMU will automatically calibrate when first powered on, but recalibrating before running
+         * the robot is a good idea to ensure that the calibration is "good".
+         * resetPosAndIMU will reset the position to 0,0,0 and also recalibrate the IMU.
+         * This is recommended before you run your autonomous, as a bad initial calibration can cause
+         * an incorrect starting value for x, y, and heading.
+         */
+        pinpoint.resetPosAndIMU();
     }
 }

@@ -9,17 +9,20 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 @TeleOp
 public class ServoTest extends OpMode {
-    private Servo turretServo;
+    private Servo transfer_servo;
     private double angle;
 
     @Override
     public void init() {
-        turretServo = hardwareMap.get(Servo.class,"turret_servo");
+        transfer_servo = hardwareMap.get(Servo.class,"transfer_servo");
     }
 
     @Override
     public void loop() {
-        angle = abs(gamepad1.left_stick_x);
-        turretServo.setPosition(angle);
+        if(gamepad1.a){
+            transfer_servo.setPosition(0.25);
+        } else {
+            transfer_servo.setPosition(0);
+        }
     }
 }

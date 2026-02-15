@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -31,12 +29,15 @@ public class TeleOpRed extends OpMode {
     double forward, strafe, rotate;
     private DcMotor intake;
     private DcMotorEx shooting;
-    //private IMU imu;
-    private Limelight3A limelight;
-    private CRServo turretServo;
-    private DcMotor left_transfer;
-    private DcMotor right_transfer;
+    private DcMotor transfer1;
+    private DcMotor transfer2;
     private Servo transfer_servo;
+    //private IMU imu;
+    //private Limelight3A limelight;
+    //private CRServo turretServo;
+    //private DcMotor left_transfer;
+    //private DcMotor right_transfer;
+    //private Servo transfer_servo;
     GoBildaPinpointDriver pinpoint;
 
     double error;
@@ -44,13 +45,14 @@ public class TeleOpRed extends OpMode {
     double derivative, integral;
 
     double turretPower;
-    public static double kp,kd,ki; //public static shows up in dashboard config
+    public static double kp,kd,ki,ks,kv; //public static shows up in dashboard config
+    double shooterVelocity,targetVelocity;
     private ElapsedTime deltaTime = new ElapsedTime();
     double[] errorArr = new double[5];
     int count = 0;
     double sum;
 
-    FtcDashboard dashboard = FtcDashboard.getInstance();
+    //FtcDashboard dashboard = FtcDashboard.getInstance();
 
 
 
@@ -58,7 +60,7 @@ public class TeleOpRed extends OpMode {
     public void init(){
 
         //init turret
-        turretServo = hardwareMap.get(CRServo.class,"turretServo");
+        //turretServo = hardwareMap.get(CRServo.class,"turretServo");
 
         //init drive/imu
         drive.init(hardwareMap);
@@ -75,27 +77,31 @@ public class TeleOpRed extends OpMode {
 
         shooting.setDirection(DcMotorEx.Direction.FORWARD);
 
-        shooting.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        shooting.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
 
-        left_transfer = hardwareMap.get(DcMotor.class,"left_transfer");
-
-        left_transfer.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        left_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER); //145.1 ticks/rev acc to website
-
-        right_transfer = hardwareMap.get(DcMotor.class, "right_transfer");
-
-        right_transfer.setDirection(DcMotor.Direction.FORWARD);
-
-        right_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        transfer1 = hardwareMap.get(DcMotor.class,"transfer1");
+        transfer2 = hardwareMap.get(DcMotor.class,"transfer2");
 
         transfer_servo = hardwareMap.get(Servo.class,"transfer_servo");
+        //left_transfer = hardwareMap.get(DcMotor.class,"left_transfer");
+
+        //left_transfer.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        //left_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER); //145.1 ticks/rev acc to website
+
+        //right_transfer = hardwareMap.get(DcMotor.class, "right_transfer");
+
+        //right_transfer.setDirection(DcMotor.Direction.FORWARD);
+
+        //right_transfer.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        //transfer_servo = hardwareMap.get(Servo.class,"transfer_servo");
 
 
 
         //init limelight
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(8); //8 = red apriltag (24)
+        //limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        //limelight.pipelineSwitch(8); //8 = red apriltag (24)
 
         //imu = hardwareMap.get(IMU.class,"imu");
         //RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP,
@@ -112,12 +118,12 @@ public class TeleOpRed extends OpMode {
         // Set the location of the robot - this should be the place you are starting the robot from
         pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
 
-
+        targetVelocity = 1700;
     }
 
     @Override
     public void start(){
-        limelight.start(); //if theres delay then put it into init but it drains battery
+        //limelight.start(); //if theres delay then put it into init but it drains battery
     }
 
     @Override
@@ -128,7 +134,7 @@ public class TeleOpRed extends OpMode {
         strafe = gamepad1.left_stick_x;
         rotate = gamepad1.right_stick_x;
 
-        if(gamepad1.a){
+        if(gamepad1.b){
             // You could use readings from April Tags here to give a new known position to the pinpoint
             pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
         }
@@ -152,24 +158,30 @@ public class TeleOpRed extends OpMode {
 
 
         //intake
-        //double right_trigger = gamepad1.right_trigger;
-        //intake.setPower(right_trigger);
+        double right_trigger = gamepad1.right_trigger;
+        intake.setPower(right_trigger);
+        transfer2.setPower(right_trigger);
+        if(gamepad1.a && error <= 20){
+            transfer1.setPower(right_trigger);
+        } else {
+            transfer1.setPower(0.0);
+        }
 
-        //.addData("Right Trigger", right_trigger);
+        telemetry.addData("Right Trigger", right_trigger);
 
 
         //apriltag recognition/telemetry
         //YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
-        limelight.updateRobotOrientation(pose2D.getHeading(AngleUnit.DEGREES));
-        LLResult llResult = limelight.getLatestResult();
+        //limelight.updateRobotOrientation(pose2D.getHeading(AngleUnit.DEGREES));
+        //LLResult llResult = limelight.getLatestResult();
 
-        telemetry.addData("isValid",llResult.isValid());
+        //telemetry.addData("isValid",llResult.isValid());
 
-        telemetry.addData("Tag Count", llResult.getFiducialResults().size());
-
-
+        //telemetry.addData("Tag Count", llResult.getFiducialResults().size());
 
 
+
+/*
         if (llResult != null && llResult.isValid()){
             Pose3D botPose = llResult.getBotpose_MT2();
             telemetry.addData("tx", llResult.getTx());
@@ -251,6 +263,7 @@ public class TeleOpRed extends OpMode {
         turretServo.setPower(0);
 
 
+
         boolean aButton = gamepad1.a;
         boolean bButton = gamepad1.b;
 
@@ -262,20 +275,47 @@ public class TeleOpRed extends OpMode {
             shooting.setPower(0.0);
         }
 
+*/
+        kp = 1; //0.15
+        ks = 0.05; //0.05
+        kv = 0.000398; //0.000372485
+
+
+        //target vel prolly 2200 far 2000 near
+        if(gamepad1.dpadDownWasPressed()){
+            targetVelocity -= 20;
+        } else if (gamepad1.dpadUpWasPressed()){
+            targetVelocity += 20;
+        }
+
+        telemetry.addData("targetVelocity",targetVelocity);
+
+        shooterVelocity = shooting.getVelocity();
+        error = targetVelocity - shooterVelocity;
+        double feedback = kp*error;
+        double feedforward = ks + kv*targetVelocity;
+        shooting.setPower(feedback+feedforward);
 
 
 
+/*
         if(gamepad1.right_trigger != 0){
             transfer_servo.setPosition(0);
         } else {
             transfer_servo.setPosition(0.15);
         }
+        */
+ ;;
 
-        telemetry.addData("A Button",aButton);
-        telemetry.addData("B Button", bButton);
+
+        //telemetry.addData("A Button",aButton);
+        //telemetry.addData("B Button", bButton);
 
 
         telemetry.addData("Flywheel",shooting.getVelocity());
+        telemetry.addData("Error",error);
+
+
 
         /*
         TelemetryPacket packet = new TelemetryPacket(); //create a new packet each loop
@@ -298,7 +338,7 @@ public class TeleOpRed extends OpMode {
          *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
          *  Forward of center is a positive number, backwards is a negative number.
          */
-        pinpoint.setOffsets(12.5, -225, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
+        pinpoint.setOffsets(12.5, -170, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
 
         /*
          * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either

@@ -1,5 +1,8 @@
+
 package org.firstinspires.ftc.teamcode;
 
+
+import static java.lang.Math.abs;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -32,13 +35,13 @@ public class TeleOpRed extends OpMode {
     private DcMotor transfer1;
     private DcMotor transfer2;
     private Servo transfer_servo;
-    //private IMU imu;
+    private IMU imu;
     //private Limelight3A limelight;
     //private CRServo turretServo;
     //private DcMotor left_transfer;
     //private DcMotor right_transfer;
     //private Servo transfer_servo;
-    GoBildaPinpointDriver pinpoint;
+    //GoBildaPinpointDriver pinpoint;
 
     double error;
     double last_error = 0.0;
@@ -103,20 +106,20 @@ public class TeleOpRed extends OpMode {
         //limelight = hardwareMap.get(Limelight3A.class, "limelight");
         //limelight.pipelineSwitch(8); //8 = red apriltag (24)
 
-        //imu = hardwareMap.get(IMU.class,"imu");
-        //RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.UP,
-                //RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
+        imu = hardwareMap.get(IMU.class,"imu");
+        RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
+                RevHubOrientationOnRobot.UsbFacingDirection.LEFT);
 
-        //imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
+        imu.initialize(new IMU.Parameters(revHubOrientationOnRobot));
 
         // Get a reference to the sensor
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+        //pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
 
         // Configure the sensor
-        configurePinpoint();
+        //configurePinpoint();
 
         // Set the location of the robot - this should be the place you are starting the robot from
-        pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
+        //pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
 
         targetVelocity = 1700;
     }
@@ -129,30 +132,29 @@ public class TeleOpRed extends OpMode {
     @Override
     public void loop(){
 
-        //drive system
-        forward = -gamepad1.left_stick_y;
-        strafe = gamepad1.left_stick_x;
-        rotate = gamepad1.right_stick_x;
 
-        if(gamepad1.b){
+
+        if(gamepad1.y){
             // You could use readings from April Tags here to give a new known position to the pinpoint
-            pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
+            //pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
+            imu.resetYaw();
         }
-        pinpoint.update();
-        Pose2D pose2D = pinpoint.getPosition();
+        //pinpoint.update();
+        //Pose2D pose2D = pinpoint.getPosition();
 
         forward = -gamepad1.left_stick_y;
         strafe = gamepad1.left_stick_x;
-        rotate = gamepad1.right_stick_x;
+        rotate = -gamepad1.right_stick_x;
 
-        telemetry.addData("Yaw: ", pose2D.getHeading(AngleUnit.DEGREES));
+        drive.driveFieldRelative(forward, strafe, rotate);
 
-        drive.driveFieldRelative(forward, strafe, rotate, pose2D.getHeading(AngleUnit.RADIANS));
+        telemetry.addData("Yaw: ", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
 
-        telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
-        telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
-        telemetry.addData("Heading angle (DEGREES)",pose2D.getHeading(AngleUnit.DEGREES));
+        //drive.driveFieldRelative(forward, strafe, rotate, pose2D.getHeading(AngleUnit.RADIANS));
 
+        //telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
+        //telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
+        //telemetry.addData("Heading angle (DEGREES)",pose2D.getHeading(AngleUnit.DEGREES));
 
         //drive.driveFieldRelative(forward, strafe, rotate);
 
@@ -161,8 +163,15 @@ public class TeleOpRed extends OpMode {
         double right_trigger = gamepad1.right_trigger;
         intake.setPower(right_trigger);
         transfer2.setPower(right_trigger);
-        if(gamepad1.a && error <= 20){
-            transfer1.setPower(right_trigger);
+        if(gamepad1.x){
+            intake.setPower(-1.0);
+            transfer2.setPower(-1.0);
+            transfer1.setPower(-1.0);
+        }
+        if(gamepad1.a && abs(error) <= 20){
+            transfer1.setPower(1.0);
+            intake.setPower(1.0);
+            transfer2.setPower(1.0);
         } else {
             transfer1.setPower(0.0);
         }
@@ -171,7 +180,7 @@ public class TeleOpRed extends OpMode {
 
 
         //apriltag recognition/telemetry
-        //YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
+        YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
         //limelight.updateRobotOrientation(pose2D.getHeading(AngleUnit.DEGREES));
         //LLResult llResult = limelight.getLatestResult();
 
@@ -338,7 +347,7 @@ public class TeleOpRed extends OpMode {
          *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
          *  Forward of center is a positive number, backwards is a negative number.
          */
-        pinpoint.setOffsets(12.5, -170, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
+        //pinpoint.setOffsets(12.5, -170, DistanceUnit.MM); //these are tuned for 3110-0002-0001 Product Insight #1
 
         /*
          * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
@@ -347,15 +356,15 @@ public class TeleOpRed extends OpMode {
          * number of ticks per unit of your odometry pod.  For example:
          *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
          */
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        //pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
 
         /*
          * Set the direction that each of the two odometry pods count. The X (forward) pod should
          * increase when you move the robot forward. And the Y (strafe) pod should increase when
          * you move the robot to the left.
          */
-        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                GoBildaPinpointDriver.EncoderDirection.REVERSED);
+        //pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
+                //GoBildaPinpointDriver.EncoderDirection.REVERSED);
 
         /*
          * Before running the robot, recalibrate the IMU. This needs to happen when the robot is stationary
@@ -365,6 +374,6 @@ public class TeleOpRed extends OpMode {
          * This is recommended before you run your autonomous, as a bad initial calibration can cause
          * an incorrect starting value for x, y, and heading.
          */
-        pinpoint.resetPosAndIMU();
+        //pinpoint.resetPosAndIMU();
     }
 }

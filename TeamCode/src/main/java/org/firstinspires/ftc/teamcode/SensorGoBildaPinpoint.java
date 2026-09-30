@@ -77,7 +77,7 @@ public class SensorGoBildaPinpoint extends OpMode {
 
         telemetry.addData("Yaw: ", pose2D.getHeading(AngleUnit.DEGREES));
 
-        drive.driveFieldRelative(forward, strafe, rotate, pose2D.getHeading(AngleUnit.RADIANS));
+        drive.driveFieldRelative(forward, strafe, rotate);
 
         telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
         telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));

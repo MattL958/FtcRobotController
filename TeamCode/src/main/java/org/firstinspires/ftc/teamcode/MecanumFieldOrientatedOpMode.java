@@ -12,11 +12,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.mechanisms.MecanumDrive;
 
 @TeleOp
-@Disabled
 public class MecanumFieldOrientatedOpMode extends OpMode {
     MecanumDrive drive = new MecanumDrive(); //call class
     double forward, strafe, rotate;
-    private DcMotor intake;
+    //private DcMotor intake;
     private IMU imu;
 
     @Override
@@ -25,11 +24,11 @@ public class MecanumFieldOrientatedOpMode extends OpMode {
         drive.init(hardwareMap);
         imu = hardwareMap.get(IMU.class, "imu");
 
-        intake = hardwareMap.get(DcMotorEx.class,"intake");
+        //intake = hardwareMap.get(DcMotorEx.class,"intake");
 
-        intake.setDirection(DcMotor.Direction.FORWARD);
+        //intake.setDirection(DcMotor.Direction.FORWARD);
 
-        intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        //intake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     @Override
@@ -38,13 +37,19 @@ public class MecanumFieldOrientatedOpMode extends OpMode {
         strafe = gamepad1.left_stick_x;
         rotate = gamepad1.right_stick_x;
 
+
+        if(gamepad1.y){
+            imu.resetYaw();
+        }
+
         telemetry.addData("Yaw: ", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
 
-        //drive.driveFieldRelative(forward, strafe, rotate);
 
-        double right_trigger = gamepad1.right_trigger;
-        intake.setPower(right_trigger);
+        drive.driveFieldRelative(forward, strafe, rotate);
 
-        telemetry.addData("Right Trigger", right_trigger);
+        //double right_trigger = gamepad1.right_trigger;
+        //intake.setPower(right_trigger);
+
+        //telemetry.addData("Right Trigger", right_trigger);
     }
 }

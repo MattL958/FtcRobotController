@@ -83,4 +83,20 @@ public class MecanumDrive {
         this.drive(newForward,newStrafe,rotate);
 
     }
+
+    public void driveFieldRelative(double forward, double strafe, double rotate, double heading){
+        //converting from cartesian to polar
+        double theta = Math.atan2(forward,strafe);
+        double r = Math.hypot(strafe,forward);
+
+        theta = AngleUnit.normalizeRadians(theta -
+                heading);
+
+        //turn polar back to cartesian
+        double newForward = r * Math.sin(theta);
+        double newStrafe = r * Math.cos(theta);
+
+        this.drive(newForward,newStrafe,rotate);
+
+    }
 }

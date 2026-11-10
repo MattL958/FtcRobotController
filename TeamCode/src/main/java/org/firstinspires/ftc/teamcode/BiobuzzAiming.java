@@ -34,12 +34,12 @@ public class BiobuzzAiming extends OpMode {
     private IMU imu;
 
     GoBildaPinpointDriver pinpoint;
-    double error;
+    double cameraError,lastCameraError,cameraDerivative,cameraIntegral;
     double derivative, integral;
     double kp,kd,ki,ks,kv;
     double goalx,goaly;
     double goalAngle;
-    double angleError;
+    double angleError, lastAngleError, angleDerivative, angleIntegral;
     private ElapsedTime deltaTime = new ElapsedTime();
 
 
@@ -78,6 +78,10 @@ public class BiobuzzAiming extends OpMode {
         // Set the location of the robot - this should be the place you are starting the robot from
         pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
 
+
+        //init lasterrors
+        lastAngleError = 0.0;
+        lastCameraError = 0.0;
     }
 
     @Override
@@ -86,7 +90,7 @@ public class BiobuzzAiming extends OpMode {
     }
 
     @Override
-    public void loop(){
+    public void loop(){ //in due time i ought to replace many of these subsystems with classes/methods for the sake of readability
 
 
 
@@ -121,36 +125,67 @@ public class BiobuzzAiming extends OpMode {
 
 
 
+
+        //goal angle calculation
+
+        //target: 64.5 in forward, 0 in sideways (start back to wall facing the target)
+        goalx = 64.5;
+        goaly = 0;
+
+        goalAngle = Math.toDegrees(Math.atan2(goaly - pose2D.getY(DistanceUnit.INCH), goalx - pose2D.getX(DistanceUnit.INCH)));
+        telemetry.addData("Goal Angle: ", goalAngle);
+
+        angleError = goalAngle - pinpoint.getHeading(AngleUnit.DEGREES);
+        angleDerivative = (angleError-lastAngleError)/Math.max(deltaTime.seconds(),0.01);
+
+        lastAngleError = angleError;
+
+        if (Math.abs(angleError)>=180){
+            angleError = -1 * (angleError % 180);
+        }
+
+        telemetry.addData("Angle Error", angleError);
+        telemetry.addData("Angle Derivative", angleDerivative);
+
+
+
        if (llResult != null && llResult.isValid() && gamepad1.a) {
+           //tag recog/autoalign
            telemetry.addData("tx", llResult.getTx());
            telemetry.addData("ty", llResult.getTy());
            telemetry.addData("ta", llResult.getTa());
 
-           error = -llResult.getTx();
-       } else if (gamepad1.a){
-           //target: 64.5 in forward, 0 in sideways (start back to wall facing the target
-           goalx = 64.5;
-           goaly = 0;
+           cameraError = -llResult.getTx() + goalAngle*0.05; //now aims right at apriltags: need change the setpoint as a function of distance and angle (probably).
+           //call ts a complementary filter if you need more buzzwords but lowk i dont think thats true
+           //else say sm bs ab sensor fusion
 
-           goalAngle = Math.toDegrees(Math.atan2(goaly - pose2D.getY(DistanceUnit.INCH), goalx - pose2D.getX(DistanceUnit.INCH)));
-           telemetry.addData("Goal Angle: ", goalAngle);
+           cameraDerivative = (cameraError - lastCameraError)/Math.max(deltaTime.seconds(),0.01);
 
-           angleError = goalAngle - pinpoint.getHeading(AngleUnit.DEGREES);
-
-
-           if (Math.abs(angleError)>=180){
-               angleError = -1 * (angleError % 180);
-           }
-
-           telemetry.addData("Angle Error", angleError);
-
+           telemetry.addData("cameraError", cameraError);
+           telemetry.addData("cameraDerivative", cameraDerivative);
 
            kp = 0.05;
+           kd = 0.025; //tune these
+
+           telemetry.addData("Rotate",kp*cameraError + kd*cameraDerivative);
+
+           rotate = Math.min(1.0, kp*cameraError + kd*cameraDerivative);
 
 
 
 
-           rotate = Math.min(1.0, kp*angleError);
+           lastCameraError = cameraError;
+           lastAngleError = 0.0; //make sure d term doesnt go crazy when it switches: this maxes out derivative = error for a frame
+
+       } else if (gamepad1.a){ //watch out here becasue maybe snapping back and forth would mess up rotation velocities
+
+
+           kp = 0.1;
+           kd = 0.00;
+
+           rotate = Math.min(1.0, kp*angleError + kd*angleDerivative);
+
+           lastCameraError = 0.0;
        }
 
        drive.driveFieldRelative(forward, strafe, rotate,pose2D.getHeading(AngleUnit.RADIANS));

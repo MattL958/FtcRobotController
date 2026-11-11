@@ -31,6 +31,7 @@ public class BiobuzzAiming extends OpMode {
     MecanumDrive drive = new MecanumDrive(); //call class
     double forward, strafe, rotate;
     private Limelight3A limelight;
+    int pipeline;
     private IMU imu;
 
     GoBildaPinpointDriver pinpoint;
@@ -61,7 +62,9 @@ public class BiobuzzAiming extends OpMode {
 
         //init limelight
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.pipelineSwitch(1);
+
+        pipeline = 0;
+        limelight.pipelineSwitch(pipeline);
 
         imu = hardwareMap.get(IMU.class,"imu");
         RevHubOrientationOnRobot revHubOrientationOnRobot = new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.FORWARD,
@@ -94,12 +97,7 @@ public class BiobuzzAiming extends OpMode {
 
 
 
-        if(gamepad1.y){
-            // You could use readings from April Tags here to give a new known position to the pinpoint
-            //pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
-            imu.resetYaw();
-            pinpoint.resetPosAndIMU();
-        }
+
         pinpoint.update();
         telemetry.update();
         Pose2D pose2D = pinpoint.getPosition();
@@ -113,15 +111,32 @@ public class BiobuzzAiming extends OpMode {
         telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
         telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
         telemetry.addData("Heading angle (DEGREES)",pose2D.getHeading(AngleUnit.DEGREES));
-        telemetry.addData("xdir",pinpoint.getEncoderX());
-        telemetry.addData("yButton", gamepad1.y);
 
 
         LLResult llResult = limelight.getLatestResult();
 
+        if(gamepad1.yWasPressed()){
+            // You could use readings from April Tags here to give a new known position to the pinpoint
+            //pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
+            imu.resetYaw();
+            pinpoint.resetPosAndIMU();
+        }
+
+        if(gamepad1.xWasPressed()){
+            pipeline = (pipeline + 1) % 2;
+            limelight.pipelineSwitch(pipeline);
+        }
+
+
         telemetry.addData("isValid",llResult.isValid());
 
         telemetry.addData("Tag Count", llResult.getFiducialResults().size());
+
+        if(pipeline == 1){
+            telemetry.addLine("Red");
+        } else {
+            telemetry.addLine("Blue");
+        }
 
 
 

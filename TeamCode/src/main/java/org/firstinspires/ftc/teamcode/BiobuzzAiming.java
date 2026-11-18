@@ -42,7 +42,8 @@ public class BiobuzzAiming extends OpMode {
     double goalAngle;
     double angleError, lastAngleError, angleDerivative, angleIntegral;
     private ElapsedTime deltaTime = new ElapsedTime();
-
+    private Servo flywheel_servo;
+    double servoPos;
 
 
 
@@ -81,6 +82,9 @@ public class BiobuzzAiming extends OpMode {
         // Set the location of the robot - this should be the place you are starting the robot from
         pinpoint.setPosition(new Pose2D(DistanceUnit.INCH, 0, 0, AngleUnit.DEGREES, 0));
 
+        //init flywheel servo
+        flywheel_servo = hardwareMap.get(Servo.class, "flywheel_servo");
+        servoPos = 0;
 
         //init lasterrors
         lastAngleError = 0.0;
@@ -203,7 +207,18 @@ public class BiobuzzAiming extends OpMode {
            lastCameraError = 0.0;
        }
 
+        if(gamepad1.right_bumper){
+            servoPos=0.1;
+        }
+        if (gamepad1.left_bumper){
+            servoPos=0.6;
+        }
+        telemetry.addData("pos",servoPos);
+        flywheel_servo.setPosition(servoPos);
+
        drive.driveFieldRelative(forward, strafe, rotate,pose2D.getHeading(AngleUnit.RADIANS));
+
+
 
     }
 
